@@ -5,6 +5,8 @@ date: "2024/2/21"
 output: html_document
 ---
 
+This file serves as a documentation of code for analyses in the study.
+
 ```{packages preparation and data import}
 library(GUniFrac)
 library(ape)
@@ -16,15 +18,11 @@ library(pairwiseAdonis)
 library(lmerTest)
 library(dplyr)
 library(stringr)
+library(ggpubr)
 well2<-read.csv("D:/result/data0605/wellnew.csv")
 lanxi2<-read.csv("D:/result/data0605/lanxinew.csv")
 ```
 
-## R Markdown
-
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
-
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
 
 ```{16S rRNA sequencing profiling}
 the 16S amplicon analyses pipeline sourced from "doi: https://doi.org/10.1007/s13238-020-00724-8"
@@ -64,7 +62,6 @@ for (i in c("bmi","wc","WHR","android_ratio","gynoid_ratio","agratio","fatpercen
 }
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
 
 ```{analyses of association between obesity-related diseases and SMI}
 for (i in c("hypertension","diabetes","dyslipidemia","MetS")){
@@ -196,7 +193,6 @@ p2 = ggplot(lanxi_vegan)+geom_boxplot(aes(x=Group,y=v,fill=Group),outlier.shape 
                                axis.ticks.y=element_line(color="black",size=0.4,lineend = 10))+custom_theme+
   scale_x_discrete(expand = expansion(add = c(0.5, 0.5)))
 ```
-
 
 ```{Bray-curtis β diversity and PERMANOVA}
  ##WELL-China
@@ -394,6 +390,21 @@ ggplot(lanxi_pcoa_result,aes(x=PCoA1,y=PCoA2,color=new_smoke))+
 dev.off()
 ```
 
-```{16S rRNA sequencing profiling}
-the 16S amplicon analyses pipeline sourced from "doi: https://doi.org/10.1007/s13238-020-00724-8"
+```{Supplementary Fig.3}
+
+data<-rbind(well2,lanxi2)
+
+pdf("final/新建文件夹/p.pdf",width =7,height = 5)
+p<-ggplot(data,aes(x=new_smoke,y=score))+
+  facet_wrap(~cohort)+
+  geom_violin(aes(color=new_smoke),trim=FALSE,position = position_dodge(1.5),linewidth=1.2)+
+  geom_boxplot(aes(color=new_smoke,fill=new_smoke),position = position_dodge(1.5),width=0.15,linewidth=0.5,outlier.shape = NA,color="grey")+ 
+  theme_bw()+
+  stat_compare_means(aes(group=Cohort),label = "p.signif",
+                     comparisons = list(c("never","Former"),
+                                        c("never","Current"),
+                                        c("Former","Current")))+
+  theme(panel.grid.major = element_blank(),panel.grid.minor = element_blank())
+
+dev.off()
 ```
