@@ -1,0 +1,399 @@
+---
+title: "smoking gut microbiome analyses"
+author: "Y Duan & C Xu"
+date: "2024/2/21"
+output: html_document
+---
+
+```{packages preparation and data import}
+library(GUniFrac)
+library(ape)
+library(phyloseq)
+library(ggplot2)
+library(dplyr)
+library(vegan)
+library(pairwiseAdonis)
+library(lmerTest)
+library(dplyr)
+library(stringr)
+well2<-read.csv("D:/result/data0605/wellnew.csv")
+lanxi2<-read.csv("D:/result/data0605/lanxinew.csv")
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{16S rRNA sequencing profiling}
+the 16S amplicon analyses pipeline sourced from "doi: https://doi.org/10.1007/s13238-020-00724-8"
+```
+
+
+
+```{analyses of association between DXA and SMI}
+for (i in c("bmi","wc","WHR","android_ratio","gynoid_ratio","agratio","fatpercent")){
+  ##WELL-China cohort
+  mod1=lm(well2[,i]~well2$age_it+well2$seqPC+well2$seqnumber+well2$marriagegroup+well2$score+well2$alcohol+well2$incomegroup+well2$edugroup+well2$phy_level+well2$antibiotic_factor+well2$substudy+well2$diet_energy+well2$supplyment)
+  sum1=summary(mod1)
+  conf1<-confint(mod1)
+  ##Lanxi cohort
+  mod2=lm(lanxi2[,i]~lanxi2$age_it+lanxi2$seqnumber+lanxi2$score+lanxi2$seqPC+lanxi2$alcohol+lanxi2$incomegroup+lanxi2$marriagegroup+lanxi2$edugroup+lanxi2$phy_level+lanxi2$substudy+lanxi2$diet_energy+lanxi2$supplyment)  
+  sum2=summary(mod2)
+  conf2<-confint(mod2)
+  #meta(tertile 2)
+  study=c("Well-China","Lanxi")
+  b1=c(round(sum1[["coefficients"]][8,1],2),round(sum2[["coefficients"]][4,1],2))
+  lower.b1=c(round(conf1[8,1],2),round(conf2[4,1],2))
+  upper.b1=c(round(conf1[8,2],2),round(conf2[4,2],2))
+  meta1<-metagen(b1,lower=lower.b1,upper=upper.b1,studlab=study,sm="b")
+  pure_data[7,i]<-paste(round(meta1[["TE.common"]],2)," (",
+                        str_c(round(meta1[["lower.common"]],2),round(meta1[["upper.common"]],2),sep = ","),")",sep = "")
+  pure_data[6,i]<-round(meta1[["pval.Q"]],4)
+  
+  #meta(tertile 3)
+  study=c("Well-China","Lanxi")
+  b2=c(round(sum1[["coefficients"]][9,1],2),round(sum2[["coefficients"]][5,1],2))
+  lower.b2=c(round(conf1[9,1],2),round(conf2[5,1],2))
+  upper.b2=c(round(conf1[9,2],2),round(conf2[5,2],2))
+  meta2<-metagen(b2,lower=lower.b2,upper=upper.b2,studlab=study,sm="b")
+  pure_data[8,i]<-paste(round(meta2[["TE.common"]],2)," (",
+                        str_c(round(meta2[["lower.common"]],2),round(meta2[["upper.common"]],2),sep = ","),")",sep = "")
+  pure_data[9,i]<-round(meta2[["pval.Q"]],4) 
+}
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+
+```{analyses of association between obesity-related diseases and SMI}
+for (i in c("hypertension","diabetes","dyslipidemia","MetS")){
+  ##WELL-China cohort
+  mod1=glm(well2[,i]~well2$age_it+well2$seqPC+well2$seqnumber+well2$marriagegroup+well2$score+well2$alcohol+well2$incomegroup+well2$edugroup+well2$phy_level+well2$antibiotic_factor+well2$substudy+well2$diet_energy+well2$supplyment,family = binomial(link = "logit"))
+  sum1=summary(mod1)
+  conf1<-confint(mod1)
+  ##Lanxi cohort
+  mod2=glm(lanxi2[,i]~lanxi2$age_it+lanxi2$seqnumber+lanxi2$score+lanxi2$seqPC+lanxi2$alcohol+lanxi2$incomegroup+lanxi2$marriagegroup+lanxi2$edugroup+lanxi2$phy_level+lanxi2$substudy+lanxi2$diet_energy+lanxi2$supplyment,family = binomial(link = "logit"))  
+  sum2=summary(mod2)
+  conf2<-confint(mod2)
+  
+  #meta(tertile 2)
+  study=c("Well-China","Lanxi")
+  OR1=c(round(exp(sum1[["coefficients"]][8,1]),2),round(exp(sum2[["coefficients"]][4,1]),2))
+  lower.OR1=c(round(exp(conf1[8,1]),2),round(exp(conf2[4,1]),2))
+  upper.OR1=c(round(exp(conf1[8,2]),2),round(exp(conf2[4,2]),2))
+  meta1<-metagen(log(OR1),lower=log(lower.OR1),upper=log(upper.OR1),studlab=study,sm="OR")
+  pure_data[7,i]<-paste(round(exp(meta1[["TE.common"]]),2)," (",
+                        str_c(round(exp(meta1[["lower.common"]]),2),round(exp(meta1[["upper.common"]]),2),sep = ","),")",sep = "")
+  pure_data[6,i]<-round(meta1[["pval.Q"]],4)
+  
+  #meta(tertile 3)
+  study=c("Well-China","Lanxi")
+  OR2=c(round(exp(sum1[["coefficients"]][9,1]),2),round(exp(sum2[["coefficients"]][5,1]),2))
+  lower.OR2=c(round(exp(conf1[9,1]),2),round(exp(conf2[5,1]),2))
+  upper.OR2=c(round(exp(conf1[9,2]),2),round(exp(conf2[5,2]),2))
+  meta2<-metagen(log(OR2),lower=log(lower.OR2),upper=log(upper.OR2),studlab=study,sm="OR")
+  pure_data[8,i]<-paste(round(exp(meta2[["TE.common"]]),2)," (",
+                        str_c(round(exp(meta2[["lower.common"]]),2),round(exp(meta2[["upper.common"]]),2),sep = ","),")",sep = "")
+  pure_data[9,i]<-round(meta2[["pval.Q"]],4)
+}
+
+ ##analysis of NAFLD was performed only in Gongshu district in WELL-China cohort
+for (i in c("NAFLD")){
+  mod1=glm(well2[,i]~well2$age_it+well2$seqPC+well2$seqnumber+well2$marriagegroup+well2$score+well2$alcohol+well2$incomegroup+well2$edugroup+well2$phy_level+well2$antibiotic_factor+well2$diet_energy+well2$supplyment,family = binomial(link = "logit"))
+  sum1=summary(mod1)
+  conf1<-confint(mod1)
+
+  mod2=glm(lanxi2[,i]~lanxi2$age_it+lanxi2$seqnumber+lanxi2$score+lanxi2$seqPC+lanxi2$alcohol+lanxi2$incomegroup+lanxi2$marriagegroup+lanxi2$edugroup+lanxi2$phy_level+lanxi2$substudy+lanxi2$diet_energy+lanxi2$supplyment,family = binomial(link = "logit"))  
+  sum2=summary(mod2)
+  conf2<-confint(mod2)
+  pure_data[4,i]=paste(round(exp(sum2[["coefficients"]][4,1]),2)," (",
+                       str_c(round(exp(conf2[4,1]),2),round(exp(conf2[4,2]),2),sep = ","),")",sep = "")
+  pure_data[5,i]=paste(round(exp(sum2[["coefficients"]][5,1]),2)," (",
+                       str_c(round(exp(conf2[5,1]),2),round(exp(conf2[5,2]),2),sep = ","),")",sep = "")
+  
+  #meta(tertile 2)
+  study=c("Well-China","Lanxi")
+  OR1=c(round(exp(sum1[["coefficients"]][8,1]),2),round(exp(sum2[["coefficients"]][4,1]),2))
+  lower.OR1=c(round(exp(conf1[8,1]),2),round(exp(conf2[4,1]),2))
+  upper.OR1=c(round(exp(conf1[8,2]),2),round(exp(conf2[4,2]),2))
+  meta1<-metagen(log(OR1),lower=log(lower.OR1),upper=log(upper.OR1),studlab=study,sm="OR")
+  pure_data[7,i]<-paste(round(exp(meta1[["TE.common"]]),2)," (",
+                        str_c(round(exp(meta1[["lower.common"]]),2),round(exp(meta1[["upper.common"]]),2),sep = ","),")",sep = "")
+  pure_data[6,i]<-round(meta1[["pval.Q"]],4)
+  
+  #meta(tertile 3)
+  study=c("Well-China","Lanxi")
+  OR2=c(round(exp(sum1[["coefficients"]][9,1]),2),round(exp(sum2[["coefficients"]][5,1]),2))
+  lower.OR2=c(round(exp(conf1[9,1]),2),round(exp(conf2[5,1]),2))
+  upper.OR2=c(round(exp(conf1[9,2]),2),round(exp(conf2[5,2]),2))
+  meta2<-metagen(log(OR2),lower=log(lower.OR2),upper=log(upper.OR2),studlab=study,sm="OR")
+  pure_data[8,i]<-paste(round(exp(meta2[["TE.common"]]),2)," (",
+                        str_c(round(exp(meta2[["lower.common"]]),2),round(exp(meta2[["upper.common"]]),2),sep = ","),")",sep = "")
+  pure_data[9,i]<-round(meta2[["pval.Q"]],4)
+}
+```
+
+```{Sibling comparision analyses in Lanxi subcohort}
+sibling<-read.csv("D:/result/siblings.csv")
+lanxi2<-subset(lanxi2,lanxi2$id%in%sibling$id)
+lanxi2<-merge(lanxi2,sibling,by.x = "id",by.y = "id",all.x = TRUE)
+a1<-as.data.frame(table(lanxi2$subclass))
+lanxi2<-merge(lanxi2,a1,by.x = "subclass",by.y = "Var1")
+lanxi2$seqPC<-ifelse(lanxi2$seqPC=="3","2","1")
+lanxi1<-subset(lanxi2,lanxi2$Freq>1)
+  ##for DXA
+for (i in c("bmi","wc","WHR","android_ratio","agratio","gynoid_ratio","fatpercent")) {
+  formula<-as.formula(paste(i,"~age_it+seqnumber+score+seqPC+alcohol+incomegroup+marriagegroup+edugroup+phy_level+diet_energy+supplyment+
+            age_it.mean+seqnumber.mean+score.mean+seqPC.mean+alcohol.mean+incomegroup.mean+marriagegroup.mean+
+            edugroup.mean+phy_level.mean+diet_energy.mean+supplyment.mean+seqnumber.mean+(1|subclass)"))
+  mod=lmer(formula,data=lanxi1)  
+  sum<-summary(mod)
+  con<-confint(mod,method="Wald")
+  data[1,i]<-paste(round(sum[["coefficients"]][4,1],2),"(",
+                   str_c(round(con[6,1],2),round(con[6,2],2),sep = ","),")",sep = "")
+  data[2,i]<-round(sum[["coefficients"]][4,5],3)
+  data[3,i]<-paste(round(sum[["coefficients"]][5,1],2),"(",
+                   str_c(round(con[7,1],2),round(con[7,2],2),sep = ","),")",sep = "")
+  data[4,i]<-round(sum[["coefficients"]][5,5],3)
+}
+
+  ##for obesity-related diseases
+for (i in c("hypertension","diabetes","dyslipidemia","NAFLD","MetS")) {
+  formula<-as.formula(paste(i,"~age_it+score+seqPC+alcohol+incomegroup+marriagegroup+edugroup+phy_level+diet_energy+
+            age_it.mean+score.mean+seqPC.mean+alcohol.mean+incomegroup.mean+marriagegroup.mean+
+            edugroup.mean+phy_level.mean+diet_energy.mean+(1|subclass)"))
+  mod=glmer(formula,data=lanxi1,family = binomial)  
+  sum<-summary(mod)
+  con<-confint(mod,parm = "beta_",method="Wald")
+  data[1,i]<-paste(round(exp(sum[["coefficients"]][3,1]),2),"(",
+                   str_c(round(exp(con[3,1]),2),round(exp(con[3,2]),2),sep = ","),")",sep = "")
+  data[2,i]<-round(sum[["coefficients"]][3,4],3)
+  data[3,i]<-paste(round(exp(sum[["coefficients"]][4,1]),2),"(",
+                   str_c(round(exp(con[4,1]),2),round(exp(con[4,2]),2),sep = ","),")",sep = "")
+  data[4,i]<-round(sum[["coefficients"]][4,4],3)
+}
+```
+
+```{Supplementary Fig.2}
+p1 = ggplot(well_vegan)+geom_boxplot(aes(x=Group,y=v,fill=Group),outlier.shape = NA,width=0.3,lwd=0.3,fatten=1)+
+  geom_text(data=df,aes(x=Group,y=mean+1.3*std,label=Letters))+
+  facet_wrap(~alpha,scales = "free_y")+ labs(x='Group',y='AlphaDiv')+
+  ggprism::theme_prism()+theme(axis.text.x = element_text(angle = 0),
+                               axis.line.x=element_line(linetype=1,color="black",size=0.5),
+                               axis.ticks.x=element_line(color="black",size=0.4,lineend = 1),
+                               axis.line.y=element_line(linetype=1,color="black",size=0.5),
+                               axis.ticks.y=element_line(color="black",size=0.4,lineend = 10))+custom_theme+
+  scale_x_discrete(expand = expansion(add = c(0.5, 0.5)))
+  ##Lanxi
+p2 = ggplot(lanxi_vegan)+geom_boxplot(aes(x=Group,y=v,fill=Group),outlier.shape = NA,width=0.3,lwd=0.3,fatten=1)+
+  geom_text(data=df,aes(x=Group,y=mean+1.3*std,label=Letters))+
+  facet_wrap(~alpha,scales = "free_y")+ labs(x='Group',y='AlphaDiv')+
+  ggprism::theme_prism()+theme(axis.text.x = element_text(angle = 0),
+                               axis.line.x=element_line(linetype=1,color="black",size=0.5),
+                               axis.ticks.x=element_line(color="black",size=0.4,lineend = 1),
+                               axis.line.y=element_line(linetype=1,color="black",size=0.5),
+                               axis.ticks.y=element_line(color="black",size=0.4,lineend = 10))+custom_theme+
+  scale_x_discrete(expand = expansion(add = c(0.5, 0.5)))
+```
+
+
+```{Bray-curtis β diversity and PERMANOVA}
+ ##WELL-China
+otutab<- read.delim("D:/result/well/otutab_rare.txt")
+set.seed(1000)
+otutab<-as.data.frame(t(otutab))
+colnames(otutab)<-otutab[1,]
+otutab<-otutab[-1,]
+otutab<-subset(otutab,rownames(otutab)%in%well2$id)
+aa<-colnames(otutab)
+otutab[,aa]<-lapply(otutab[,aa], as.numeric)
+rownames(well2)<-well2[,1]
+well2<-well2[,-1]
+well_dist<-vegdist(otutab,method = "bray",binary = F)
+
+
+well_pcoa<-cmdscale(well_dist,k=3,eig = T)
+well_pcoa_points <- as.data.frame(well_pcoa$points)
+sum_eig <- sum(well_pcoa$eig)
+eig_percent <- round(well_pcoa$eig/sum_eig*100,2)
+
+colnames(well_pcoa_points) <- paste0("PCoA", 1:3)
+well_pcoa_points$id<-rownames(well_pcoa_points)
+well_pcoa_result1 <- merge(well_pcoa_points,well2,by.x = "id",by.y = "id")
+
+  ##PERMANOVA
+well2$diet_energy[is.na(well2$diet_energy)]<-mean(well2$diet_energy,na.rm=TRUE)
+well_div<-adonis2(well_dist~new_smoke+seqPC+seqnumber+phy_level+alcohol+edugroup+marriagegroup+incomegroup+antibiotic_factor+age_it+substudy+diet_energy+supplyment,data = well2,permutations = 999)
+
+well.pairwise.adonis <- pairwise.adonis2(well_dist~new_smoke+seqPC+seqnumber+phy_level+alcohol+edugroup+marriagegroup+incomegroup+antibiotic_factor+age_it+substudy+diet_energy+supplyment,
+                                         data=well2,nperm = 999)
+
+  ###Fig.1 A1
+pdf("final/pcoa/well-bray.pdf",width =7,height = 5)
+ggplot(well_pcoa_result1,aes(x=PCoA1,y=PCoA2,color=new_smoke))+
+  geom_point(alpha=0.7,size=1.5,shape=20)+
+  stat_ellipse(level=0.95,size=0.5,type = "t")+
+  labs(x=paste("PCoA 1 (", eig_percent[1], "%)", sep=""),
+       y=paste("PCoA 2 (", eig_percent[2], "%)", sep=""))+
+  geom_vline(aes(xintercept=0),linetype="dashed",size=0.3)+
+  geom_hline(aes(yintercept=0),linetype="dashed",size=0.3)+
+  theme(panel.background = element_rect(fill='white',colour = 'black'),
+        panel.border = element_rect(linetype = "solid",fill = NA,linewidth = 0.8),
+        axis.title.x=element_text(colour = 'black',size=10),
+        axis.title.y = element_text(colour = 'black',size=10),
+        legend.text = element_text(size = 8),
+        axis.line = element_line(linetype = "solid",linewidth = 0.8))+
+  guides(color = guide_legend(override.aes = list(size = 4))) 
+dev.off()
+
+  ##Lanxi
+otutab<- read.delim("D:/result/lanxi/otutab_rare.txt")
+lanxi_dist<-vegdist(otutab,method = "bray",binary = F)
+lanxi_pcoa<-cmdscale(lanxi_dist,k=3,eig = T)
+lanxi_pcoa_points <- as.data.frame(lanxi_pcoa$points)
+sum_eig <- sum(lanxi_pcoa$eig)
+eig_percent <- round(lanxi_pcoa$eig/sum_eig*100,2)
+
+colnames(lanxi_pcoa_points) <- paste0("PCoA", 1:3)
+lanxi_pcoa_points$id<-rownames(lanxi_pcoa_points)
+lanxi_pcoa_result1 <- merge(lanxi_pcoa_points,lanxi2,by.x = "id",by.y = "id")
+
+ ##PERMANOVA
+lanxi_div<-adonis2(lanxi_dist~new_smoke+seqPC+seqnumber+phy_level+alcohol+edugroup+marriagegroup+incomegroup+age_it+substudy+supplyment+diet_energy,data = lanxi2,permutations = 999)
+
+
+lanxi.pairwise.adonis <- pairwise.adonis2(lanxi_dist~new_smoke+seqPC+seqnumber+phy_level+alcohol+edugroup+marriagegroup+incomegroup+age_it+substudy+supplyment+diet_energy,
+                                          data=lanxi2,nperm = 999)
+
+pdf("final/新建文件夹/lanxi-bray.pdf",width =7,height = 5)
+ggplot(lanxi_pcoa_result1,aes(x=PCoA1,y=PCoA2,color=new_smoke))+
+  geom_point(alpha=0.7,size=1.5,shape=20)+
+  stat_ellipse(level=0.95,size=0.5,type = "t")+
+  labs(x=paste("PCoA 1 (", eig_percent[1], "%)", sep=""),
+       y=paste("PCoA 2 (", eig_percent[2], "%)", sep=""))+
+  geom_vline(aes(xintercept=0),linetype="dashed",size=0.3)+
+  geom_hline(aes(yintercept=0),linetype="dashed",size=0.3)+
+  theme(panel.background = element_rect(fill='white',colour = 'black'),
+        panel.border = element_rect(linetype = "solid",fill = NA,linewidth = 0.8),
+        axis.title.x=element_text(colour = 'black',size=10),
+        axis.title.y = element_text(colour = 'black',size=10),
+        legend.text = element_text(size = 8),
+        axis.line = element_line(linetype = "solid",linewidth = 0.8))+
+  guides(color = guide_legend(override.aes = list(size = 4))) 
+
+dev.off()
+```
+
+```{Unifrac β diversity and PERMANOVA}
+##WELL-China
+tax <- read.delim("D:/result/well/tax.txt")
+otutab_rare <- read.delim("D:/result/well/otutab_rare.txt")
+rownames(otutab)<-otutab[,1]
+otutab<-otutab[,-1]
+otutab<-select(otutab,c(well2$id))
+aa<-colnames(otutab)
+otutab[,aa]<-lapply(otutab[,aa], as.numeric)
+rownames(tax)<-tax[,1]
+tax<-tax[,-1]
+otutab<-as.matrix(otutab)
+tax<-as.matrix(tax)
+OTU = otu_table(otutab, taxa_are_rows = TRUE)
+TAX = tax_table(tax)
+physeq<-phyloseq(OTU,TAX)
+rownames(well2)<-well2[,1]
+well2<-well2[,-1]
+random_tree<-rtree(ntaxa(physeq),rooted = TRUE,tip.label = taxa_names(physeq))                        
+physeq1<-merge_phyloseq(physeq,well2,random_tree)
+well_unifrac<-UniFrac(physeq1)
+well_pcoa<-cmdscale(well_unifrac,k=3,eig = T)
+well_pcoa_points <- as.data.frame(well_pcoa$points)
+sum_eig <- sum(well_pcoa$eig)
+eig_percent <- round(well_pcoa$eig/sum_eig*100,2)
+
+colnames(well_pcoa_points) <- paste0("PCoA", 1:3)
+well_pcoa_points$id<-rownames(well_pcoa_points)
+well2$id<-rownames(well2)
+well_pcoa_result <- merge(well_pcoa_points,well2,by="id")
+
+well2$diet_energy[is.na(well2$diet_energy)]<-mean(well2$diet_energy,na.rm=TRUE)
+well_div<-adonis2(well_unifrac~new_smoke+seqPC+seqnumber+phy_level+alcohol+edugroup+marriagegroup+incomegroup+antibiotic_factor+age_it+substudy+diet_energy+supplyment,data = well2,permutations = 999)
+
+well.pairwise.adonis <- pairwise.adonis2(well_unifrac~new_smoke+seqPC+seqnumber+phy_level+alcohol+edugroup+marriagegroup+incomegroup+antibiotic_factor+age_it+substudy+diet_energy+supplyment,
+                                         data=well2,nperm = 999)
+
+##plot
+pdf("final/pcoa/well-unifrac.pdf",width =7,height = 5)
+ggplot(well_pcoa_result,aes(x=PCoA1,y=PCoA2,color=new_smoke))+
+  geom_point(alpha=0.7,size=1.5,shape=20)+
+  stat_ellipse(level=0.95,size=0.5,type = "t")+
+  labs(x=paste("PCoA 1 (", eig_percent[1], "%)", sep=""),
+       y=paste("PCoA 2 (", eig_percent[2], "%)", sep=""))+
+  geom_vline(aes(xintercept=0),linetype="dashed",size=0.3)+
+  geom_hline(aes(yintercept=0),linetype="dashed",size=0.3)+
+  theme(panel.background = element_rect(fill='white',colour = 'black'),
+        panel.border = element_rect(linetype = "solid",fill = NA,linewidth = 0.8),
+        axis.title.x=element_text(colour = 'black',size=10),
+        axis.title.y = element_text(colour = 'black',size=10),
+        legend.text = element_text(size = 8),
+        axis.line = element_line(linetype = "solid",linewidth = 0.8))+
+  guides(color = guide_legend(override.aes = list(size = 4))) 
+dev.off()
+
+###Lanxi
+rownames(otutab)<-otutab[,1]
+otutab<-otutab[,-1]
+otutab<-select(otutab,c(lanxi2$id))
+aa<-colnames(otutab)
+otutab[,aa]<-lapply(otutab[,aa], as.numeric)
+rownames(tax)<-tax[,1]
+tax<-tax[,-1]
+otutab<-as.matrix(otutab)
+tax<-as.matrix(tax)
+OTU = otu_table(otutab, taxa_are_rows = TRUE)
+TAX = tax_table(tax)
+physeq<-phyloseq(OTU,TAX)
+rownames(lanxi2)<-lanxi2[,1]
+lanxi2<-lanxi2[,-1]
+random_tree<-rtree(ntaxa(physeq),rooted = TRUE,tip.label = taxa_names(physeq))                        
+physeq1<-merge_phyloseq(physeq,lanxi2,random_tree)
+lanxi_unifrac<-UniFrac(physeq1)
+lanxi_pcoa<-cmdscale(lanxi_unifrac,k=3,eig = T)
+lanxi_pcoa_points <- as.data.frame(lanxi_pcoa$points)
+sum_eig <- sum(lanxi_pcoa$eig)
+eig_percent <- round(lanxi_pcoa$eig/sum_eig*100,2)
+
+colnames(lanxi_pcoa_points) <- paste0("PCoA", 1:3)
+lanxi_pcoa_points$id<-rownames(lanxi_pcoa_points)
+lanxi2$id<-rownames(lanxi2)
+lanxi_pcoa_result <- merge(lanxi_pcoa_points,lanxi2,by="id")
+
+lanxi_div<-adonis2(lanxi_unifrac~new_smoke+seqPC+seqnumber+phy_level+alcohol+edugroup+marriagegroup+incomegroup+age_it+substudy+supplyment+diet_energy,data = lanxi2,permutations = 999)
+
+
+lanxi.pairwise.adonis <- pairwise.adonis2(lanxi_unifrac~new_smoke+seqPC+seqnumber+phy_level+alcohol+edugroup+marriagegroup+incomegroup+age_it+substudy+supplyment+diet_energy,
+                                          data=lanxi2,nperm = 999)
+
+
+##plot
+pdf("final/pcoa/lanxi-unifrac11.pdf",width =7,height = 5)
+ggplot(lanxi_pcoa_result,aes(x=PCoA1,y=PCoA2,color=new_smoke))+
+  geom_point(alpha=0.7,size=1.5,shape=20)+
+  stat_ellipse(level=0.95,size=0.5,type = "t")+
+  labs(x=paste("PCoA 1 (", eig_percent[1], "%)", sep=""),
+       y=paste("PCoA 2 (", eig_percent[2], "%)", sep=""))+
+  geom_vline(aes(xintercept=0),linetype="dashed",size=0.3)+
+  geom_hline(aes(yintercept=0),linetype="dashed",size=0.3)+
+  theme(panel.background = element_rect(fill='white',colour = 'black'),
+        panel.border = element_rect(linetype = "solid",fill = NA,linewidth = 0.8),
+        axis.title.x=element_text(colour = 'black',size=10),
+        axis.title.y = element_text(colour = 'black',size=10),
+        legend.text = element_text(size = 8),
+        axis.line = element_line(linetype = "solid",linewidth = 0.8))+
+  guides(color = guide_legend(override.aes = list(size = 4)))+ylim(-0.2,NA) 
+dev.off()
+```
+
+```{16S rRNA sequencing profiling}
+the 16S amplicon analyses pipeline sourced from "doi: https://doi.org/10.1007/s13238-020-00724-8"
+```
